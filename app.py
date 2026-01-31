@@ -2,68 +2,54 @@ import streamlit as st
 import re
 from openai import OpenAI
 
-# 1. Konfiguracja strony
-st.set_page_config(page_title="SafeAI Gateway Pro", layout="wide")
+# 1. Konfiguracja
+st.set_page_config(page_title="SafeAI Gateway", layout="wide")
 
-# --- TWÓJ KLUCZ API (Wstawiony na stałe) ---
-OPENAI_API_KEY = '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' 
-# ---------------------------------------
+# --- KLUCZ WPISANY NA STAŁE ---
+# Dzięki temu po odświeżeniu strony system od razu go zna.
+OPENAI_API_KEY = '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'
 
-# 2. Silnik anonimizacji (RODO + Adresy)
+# 2. Funkcja czyszcząca dane
 def clean_data(text):
-    # E-maile
     text = re.sub(r'\S+@\S+', '[UKRYTY_EMAIL]', text)
-    # Telefony
     text = re.sub(r'(?:\+\d{2})?\s?\d{3}[-\s]?\d{3}[-\s]?\d{3}', '[UKRYTY_TEL]', text)
-    # NIP, PESEL, REGON
     text = re.sub(r'\d{3}-\d{3}-\d{2}-\d{2}', '[UKRYTY_NIP]', text)
     text = re.sub(r'\d{11}', '[UKRYTY_PESEL]', text)
-    text = re.sub(r'\d{9,10}', '[UKRYTY_ID]', text)
-    # Adresy i kody pocztowe
     text = re.sub(r'\d{2}-\d{3}', '[UKRYTY_KOD]', text)
     text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+', '[UKRYTY_ADRES]', text)
     return text
 
-# 3. Panel boczny
-st.sidebar.title("🛡️ Status SafeAI")
-st.sidebar.success("✅ Klucz API: Aktywny")
-st.sidebar.write("🔒 Filtr RODO: Włączony")
-st.sidebar.metric("Zablokowane wycieki", "24")
-
-# 4. Interfejs Główny
+# 3. Interfejs użytkownika (Bez pola na klucz!)
 st.title("🛡️ SafeAI Gateway")
-st.write("### Bezpieczna brama do Sztucznej Inteligencji")
+st.write("Witamy w bezpiecznym panelu AI Twojej firmy.")
 
-st.warning("⚖️ **Ważne:** Używanie AI bez filtrów narusza RODO i AI Act. Ten system chroni Twój biznes przed karami.")
+# Panel boczny tylko z informacjami
+st.sidebar.header("🛡️ Status Systemu")
+st.sidebar.success("✅ Połączono z OpenAI")
+st.sidebar.info("Twoje dane są filtrowane przed wysłaniem.")
 
-st.divider()
+# 4. Pole tekstowe
+user_input = st.text_area("Wpisz zapytanie do AI:", height=200)
 
-# 5. Pole wprowadzania danych
-user_input = st.text_area("Wpisz polecenie dla AI (system automatycznie ukryje dane wrażliwe):", height=150)
-
-if st.button("🚀 Uruchom bezpieczne przetwarzanie"):
+if st.button("🚀 Wyślij bezpiecznie"):
     if not user_input:
-        st.warning("Proszę wpisać treść zapytania.")
+        st.warning("Najpierw wpisz tekst.")
     else:
-        # Proces anonimizacji
+        # Anonimizacja
         cleaned = clean_data(user_input)
         
-        st.write("🛡️ **Podgląd tarczy (To widzi model AI):**")
+        st.subheader("🛡️ Podgląd bezpieczeństwa:")
         st.code(cleaned)
         
-        # Komunikacja z OpenAI
+        # Wywołanie API
         try:
             client = OpenAI(api_key=OPENAI_API_KEY)
-            with st.spinner('Analizowanie przez AI...'):
+            with st.spinner('AI generuje odpowiedź...'):
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": cleaned}]
                 )
-                st.success("Odpowiedź SafeAI:")
+                st.success("Odpowiedź AI:")
                 st.write(response.choices[0].message.content)
         except Exception as e:
-            st.error(f"Błąd OpenAI (sprawdź saldo na platformie): {e}")
-
-st.divider()
-st.info("📩 Kontakt i wdrożenia: vkarykin7@gmail.com")
-st.caption("© 2026 SafeAI Gateway Polska")
+            st.error(f"Błąd: {e}")
