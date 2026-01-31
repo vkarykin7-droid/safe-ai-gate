@@ -2,10 +2,10 @@ import streamlit as st
 import re
 from openai import OpenAI
 
-# 1. Konfiguracja (Musi być na samej górze)
+# 1. Konfiguracja strony (musi być pierwsza!)
 st.set_page_config(page_title="SafeAI Gateway Pro", page_icon="🛡️", layout="wide")
 
-# 2. Silnik anonimizacji
+# 2. Funkcja anonimizująca
 def clean_data(text):
     text = re.sub(r'\S+@\S+', '[UKRYTY_EMAIL]', text)
     text = re.sub(r'\d{3}-\d{3}-\d{2}-\d{2}', '[UKRYTY_NIP]', text)
@@ -13,7 +13,7 @@ def clean_data(text):
     text = re.sub(r'(?:\+\d{2})?\s?\d{3}[-\s]?\d{3}[-\s]?\d{3}', '[UKRYTY_TEL]', text)
     return text
 
-# 3. Panel Boczny
+# 3. Panel Boczny (Sidebar)
 with st.sidebar:
     st.header("🛡️ Panel Kontrolny")
     api_key = st.text_input("Klucz API OpenAI", type="password")
@@ -21,58 +21,66 @@ with st.sidebar:
     st.write("✅ Filtr RODO: Aktywny")
     st.write("✅ Zgodność AI Act: OK")
     st.divider()
-    st.metric(label="Zablokowane wycieki", value="12", delta="+3 dzisiaj")
+    # Uproszczony licznik bez delty, aby uniknąć błędów metrics_util
+    st.metric(label="Zablokowane wycieki", value="12")
+    st.caption("Wersja: 1.0.5 Enterprise")
 
 # 4. Strona Główna i Argumenty Biznesowe
 st.title("🛡️ SafeAI Gateway")
-st.subheader("Bezpieczny dostęp do AI dla Twojego Biznesu")
+st.markdown("### Bezpieczny dostęp do AI dla Twojego Biznesu")
 
-# Trzy kolumny z ryzykami
-c1, c2, c3 = st.columns(3)
-with c1:
+# Sekcja Ryzyk
+col1, col2, col3 = st.columns(3)
+with col1:
     st.error("⚖️ **AI Act (Prawo)**")
     st.write("Firmy bez kontroli AI w 2026 r. mogą być uznane za podmioty wysokiego ryzyka.")
-with c2:
+with col2:
     st.error("🔓 **Luka RODO**")
-    st.write("Dane wklejane do ChatGPT uczą model. To złamanie RODO, za które odpowiada prezes.")
-with c3:
+    st.write("Dane wklejane do ChatGPT uczą model. To złamanie RODO, za które odpowiada zarząd.")
+with col3:
     st.error("🕵️ **Shadow AI**")
-    st.write("80% pracowników używa AI bez Twojej wiedzy. Daj im bezpieczne narzędzie.")
+    st.write("80% pracowników używa AI bez Twojej wiedzy. Daj im bezpieczne, oficjalne narzędzie.")
 
 st.divider()
 
 # 5. Obsługa zapytań
-user_input = st.text_area("Wpisz zapytanie (system wyczyści dane):", height=150)
+user_input = st.text_area("Wpisz polecenie dla AI (system usunie dane wrażliwe):", height=150)
 
 if st.button("🚀 Generuj bezpieczną odpowiedź"):
     if not api_key:
-        st.error("Wprowadź klucz API w panelu bocznym.")
+        st.error("Wprowadź klucz API w panelu bocznym!")
     elif not user_input:
-        st.warning("Wpisz tekst.")
+        st.warning("Wpisz tekst do przetworzenia.")
     else:
-        cleaned = clean_data(user_input)
-        with st.expander("👁️ Podgląd ochrony (To widzi AI)"):
-            st.code(cleaned)
+        cleaned_prompt = clean_data(user_input)
+        
+        with st.expander("👁️ Podgląd ochrony (Tyle widzi AI)"):
+            st.code(cleaned_prompt)
         
         try:
             client = OpenAI(api_key=api_key)
-            with st.spinner('Przetwarzanie...'):
-                resp = client.chat.completions.create(
+            with st.spinner('Trwa bezpieczne przetwarzanie...'):
+                response = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": cleaned}]
+                    messages=[{"role": "user", "content": cleaned_prompt}]
                 )
                 st.success("Odpowiedź SafeAI:")
-                st.write(resp.choices[0].message.content)
+                st.write(response.choices[0].message.content)
         except Exception as e:
-            st.error(f"Błąd API: {e}")
+            st.error(f"Błąd połączenia: {e}")
 
-# 6. Sekcja O nas i Kontakt
+# 6. Sekcja O NAS i KONTAKT
+st.write("")
+st.write("")
 st.divider()
-st.subheader("O SafeAI Gateway")
-st.write("""
-Pomagamy polskim firmom wdrażać AI zgodnie z prawem. 
-Nasz system to tarcza chroniąca Twoje tajemnice handlowe i dane osobowe.
-""")
-st.info("📩 **Kontakt i wdrożenia:** vkarykin7@gmail.com")
 
-st.caption("© 2026 SafeAI Gateway Polska")
+st.subheader("O projekcie SafeAI Gateway")
+st.write("""
+Jesteśmy polskim dostawcą rozwiązań ochrony danych w erze AI. Nasza misja to bezpieczna transformacja cyfrowa firm 
+z sektora MŚP. Dzięki naszej technologii, pracownicy mogą korzystać z najnowocześniejszych modeli językowych 
+bez narażania firmy na kary RODO czy wyciek tajemnic handlowych.
+""")
+
+st.info(f"📩 **Kontakt i wdrożenia:** vkarykin7@gmail.com")
+
+st.caption("© 2026 SafeAI Gateway Polska | Twój partner w bezpiecznym AI")
