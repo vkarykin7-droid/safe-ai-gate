@@ -144,4 +144,11 @@ st.write("### O SafeAI Gateway")
 st.write("Dostarczamy rozwiązania Privacy-First dla sektora prawnego i finansowego. Nasza bramka pozwala na bezpieczną adopcję AI zgodnie z polskim i europejskim prawem.")
 
 f_col1, f_col2 = st.columns([2, 1])
-with
+with f_col1:
+    st.write("Działamy w oparciu o zaawansowane filtry de-identyfikacji danych wrażliwych, zapewniając pełną poufność Twoich procesów biznesowych.")
+with f_col2:
+    st.write("### 📩 Kontakt")
+    st.write("**E-mail:** vkarykin7@gmail.com")
+
+st.divider()
+st.caption("© 2026 SafeAI Gateway Polska | Zgodność z RODO i AI Act")
