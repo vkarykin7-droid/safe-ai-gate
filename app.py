@@ -79,62 +79,63 @@ image_base64 = None
 if uploaded_file and uploaded_file.type in ["image/jpeg", "image/png"]:
     st.image(uploaded_file, caption="Wgrane zdjęcie do analizy Vision", width=300)
     image_base64 = encode_image(uploaded_file)
-
 # 5. LOGIKA PRZETWARZANIA
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
     if not user_input and not uploaded_file:
-        st.warning("Najpierw wprowadź tekst lub wgraj plik.")
+        st.warning("Najpierw wprowadź polecenie lub wgraj plik.")
     else:
-        with st.spinner('Trwa analiza, anonimizacja i zapytanie do AI...'):
-            # Inicjalizacja tekstu do wysłania
-            full_text = user_input if user_input else ""
-            
-            # --- EKSTRAKCJA TEKSTU Z PLIKÓW ---
+        with st.spinner('Trwa anonimizacja i realizacja zadania...'):
+            # Łączymy polecenie użytkownika z tekstem z plików
+            context_text = ""
             if uploaded_file:
                 try:
                     if uploaded_file.type == "application/pdf":
                         with pdfplumber.open(uploaded_file) as pdf:
-                            pdf_text = "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
-                            full_text += "\n" + pdf_text
+                            context_text = "\n".join([p.extract_text() for p in pdf.pages if p.extract_text()])
                     elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
                         doc = Document(uploaded_file)
-                        doc_text = "\n".join([p.text for p in doc.paragraphs])
-                        full_text += "\n" + doc_text
+                        context_text = "\n".join([p.text for p in doc.paragraphs])
                     elif image_base64:
-                        # Wykorzystanie modelu Vision do odczytania tekstu ze zdjęcia
                         vision_res = client.chat.completions.create(
                             model="gpt-4o",
                             messages=[{"role": "user", "content": [
-                                {"type": "text", "text": "Przepisz cały tekst z tego zdjęcia. Nie dodawaj komentarzy."},
+                                {"type": "text", "text": "Przepisz cały tekst ze zdjęcia."},
                                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
                             ]}]
                         )
-                        full_text += "\n" + vision_res.choices[0].message.content
+                        context_text = vision_res.choices[0].message.content
                 except Exception as e:
-                    st.error(f"Błąd podczas odczytu pliku: {e}")
+                    st.error(f"Błąd pliku: {e}")
 
+            # Tworzymy pełny tekst (Polecenie + Dane z pliku)
+            full_content = f"POLECENIE: {user_input}\n\nDANE: {context_text}"
+            
             # --- ANONIMIZACJA ---
-            cleaned = clean_data(full_text)
+            cleaned = clean_data(full_content)
             leaks_count = cleaned.count("[UKRYT")
             
             # --- ZAPYTANIE DO CHATU ---
             try:
                 response = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Przeanalizuj poniższy tekst i wyciągnij najważniejsze wnioski:\n\n{cleaned}"}]
+                    messages=[
+                        {"role": "system", "content": "Jesteś bezpiecznym asystentem biurowym. Wykonaj polecenie użytkownika, bazując na dostarczonych danych. Zignoruj fakt, że dane osobowe zostały zastąpione tagami takimi jak [UKRYTY_...]."},
+                        {"role": "user", "content": cleaned}
+                    ]
                 )
-                
-                # Zapisujemy wyniki do sesji, aby nie zniknęły po odświeżeniu
+                # Zapis do sesji
                 st.session_state['last_ai_response'] = response.choices[0].message.content
                 st.session_state['last_cleaned_text'] = cleaned
                 st.session_state['last_found_leaks'] = leaks_count
                 
-                # Aktualizacja liczników globalnych
+                # Liczniki
                 st.session_state['leaks_blocked'] += leaks_count
                 st.session_state['total_queries'] += 1
                 
-                # Odświeżamy aplikację, aby sidebar pokazał nowe dane
                 st.rerun()
+
+            except Exception as e:
+                st.error(f"❌ Problem z OpenAI: {str(e)}")
 
             except Exception as e:
                 st.error(f"❌ Problem z połączeniem OpenAI: {str(e)}")
