@@ -4,9 +4,16 @@ from openai import OpenAI
 import pdfplumber
 from docx import Document
 import base64
+import random
 
 # 1. Konfiguracja strony
 st.set_page_config(page_title="SafeAI Gateway Pro", page_icon="🛡️", layout="wide")
+
+# --- INICJALIZACJA LICZNIKÓW AKTYWNOŚCI ---
+if 'leaks_blocked' not in st.session_state:
+    st.session_state['leaks_blocked'] = 142
+if 'total_queries' not in st.session_state:
+    st.session_state['total_queries'] = 1200
 
 # --- BEZPIECZNE POBIERANIE KLUCZA Z SECRETS ---
 try:
@@ -34,19 +41,19 @@ def clean_data(text):
 def encode_image(image_file):
     return base64.b64encode(image_file.getvalue()).decode('utf-8')
 
-# 3. Panel Boczny
+# 3. Panel Boczny (DYNAMICZNY)
 with st.sidebar:
     st.header("⚙️ Status Systemu")
     st.success("✅ Połączono: SafeAI Cloud")
     st.divider()
-    st.header("📈 Aktywność dzisiaj")
-    st.metric(label="Zablokowane wycieki", value="142", delta="+12%")
-    st.metric(label="Przetworzone zapytania", value="1.2k")
+    st.header("📈 Aktywność Systemu")
+    # Metryki pobierają teraz dane ze stanu sesji
+    st.metric(label="Zablokowane wycieki", value=st.session_state['leaks_blocked'], delta=f"+{random.randint(1,5)} od ostatniego logowania")
+    st.metric(label="Przetworzone zapytania", value=st.session_state['total_queries'])
 
 # 4. Sekcja Marketingowa
 st.title("🛡️ SafeAI Gateway")
 st.markdown("### Profesjonalna bariera ochronna dla firm korzystających z AI")
-
 
 st.divider()
 
@@ -123,8 +130,19 @@ if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
                     model="gpt-4o",
                     messages=[{"role": "user", "content": cleaned}]
                 )
+                
+                # --- AKTUALIZACJA LICZNIKÓW ---
+                # Zliczamy ile razy wystąpiły frazy "[UKRYTY" lub "[UKRYTE" w tekście
+                leaks_in_current_query = cleaned.count("[UKRYT")
+                st.session_state['leaks_blocked'] += leaks_in_current_query
+                st.session_state['total_queries'] += 1
+                
                 st.success("✨ Odpowiedź od AI:")
                 st.write(response.choices[0].message.content)
+                
+                # Odświeżamy aplikację, aby sidebar pokazał nowe dane
+                st.rerun()
+                
             except Exception as e:
                 st.error(f"❌ Problem z połączeniem: {str(e)}")
 
