@@ -4,7 +4,6 @@ from openai import OpenAI
 import pdfplumber
 from docx import Document
 import base64
-import random
 
 # 1. Konfiguracja strony
 st.set_page_config(page_title="SafeAI Gateway Pro", page_icon="🛡️", layout="wide")
@@ -42,6 +41,9 @@ def clean_data(text):
     text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(\s+[0-9A-Za-z/]+)?', '[UKRYTY_ADRES]', text)
     return text
 
+def encode_image(image_file):
+    return base64.b64encode(image_file.getvalue()).decode('utf-8')
+
 # 3. Panel Boczny
 with st.sidebar:
     st.header("⚙️ Status Systemu")
@@ -50,58 +52,27 @@ with st.sidebar:
     st.header("📈 Aktywność Sesji")
     st.metric(label="Zablokowane wycieki", value=st.session_state['leaks_blocked'])
     st.metric(label="Przetworzone zapytania", value=st.session_state['total_queries'])
+    if st.button("Wyczyść wyniki"):
+        st.session_state['last_ai_response'] = None
+        st.rerun()
 
 # 4. Interfejs Użytkownika
 st.title("🛡️ SafeAI Gateway")
 st.markdown("### Profesjonalna bariera ochronna dla firm")
 
-user_input = st.text_area("Wklej tekst do analizy:", height=200)
+# Główne wejścia danych
+user_input = st.text_area("Wklej tekst do analizy:", height=150)
+uploaded_file = st.file_uploader("📂 Opcjonalnie: Wczytaj plik (PDF, DOCX, JPG, PNG)", type=["pdf", "docx", "jpg", "png", "jpeg"])
+
+# Podgląd obrazu
+image_base64 = None
+if uploaded_file and uploaded_file.type in ["image/jpeg", "image/png"]:
+    st.image(uploaded_file, caption="Wgrane zdjęcie", width=250)
+    image_base64 = encode_image(uploaded_file)
 
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
-    if not user_input:
-        st.warning("Najpierw wprowadź tekst.")
+    if not user_input and not uploaded_file:
+        st.warning("Proszę wprowadzić tekst lub wgrać plik.")
     else:
-        with st.spinner('Trwa anonimizacja i zapytanie do AI...'):
-            # Anonimizacja
-            cleaned = clean_data(user_input)
-            found_leaks = cleaned.count("[UKRYT")
-            
-            try:
-                # Zapytanie do OpenAI
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": cleaned}]
-                )
-                
-                # Zapisujemy wszystko do session_state
-                st.session_state['last_ai_response'] = response.choices[0].message.content
-                st.session_state['last_cleaned_text'] = cleaned
-                st.session_state['last_found_leaks'] = found_leaks
-                
-                # Aktualizacja globalnych liczników
-                st.session_state['leaks_blocked'] += found_leaks
-                st.session_state['total_queries'] += 1
-                
-                # Wymuszamy odświeżenie UI dla sidebar'u
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"Błąd OpenAI: {e}")
-
-# 5. WYŚWIETLANIE WYNIKÓW (POZA PRZYCISKIEM)
-if st.session_state['last_ai_response']:
-    st.divider()
-    st.info(f"🛡️ **Tarcza SafeAI:** Wykryto i zanonimizowano **{st.session_state['last_found_leaks']}** danych wrażliwych.")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Tekst po anonimizacji")
-        st.code(st.session_state['last_cleaned_text'])
-    
-    with col2:
-        st.subheader("Odpowiedź AI")
-        st.write(st.session_state['last_ai_response'])
-
-# Stopka
-st.divider()
-st.caption("© 2026 SafeAI Gateway Polska")
+        with st.spinner('Trwa przetwarzanie danych...'):
+            full_text =
