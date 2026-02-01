@@ -5,8 +5,12 @@ from openai import OpenAI
 # 1. Konfiguracja strony
 st.set_page_config(page_title="SafeAI Gateway Pro", page_icon="🛡️", layout="wide")
 
-# --- TWÓJ NOWY KLUCZ API ---
-API_KEY = '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'
+# --- BEZPIECZNE POBIERANIE KLUCZA Z SECRETS ---
+try:
+    API_KEY = st.secrets["OPENAI_API_KEY"]
+except:
+    st.error("Błąd: Nie skonfigurowano klucza API w Secrets!")
+    st.stop()
 
 # 2. Silnik anonimizacji danych (RODO)
 def clean_data(text):
@@ -29,20 +33,17 @@ with st.sidebar:
     st.divider()
     st.write("🔒 **Technologia:** Każde zapytanie przechodzi przez lokalny filtr de-identyfikacji.")
 
-# 4. Sekcja Marketingowa - Twoje argumenty biznesowe
+# 4. Sekcja Marketingowa - Argumenty biznesowe
 st.title("🛡️ SafeAI Gateway")
 st.markdown("### Profesjonalna bariera ochronna dla firm korzystających z AI")
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.error("⚖️ **AI Act (Nowe prawo)**")
     st.write("W 2026 roku wchodzą w życie kluczowe przepisy unijne o AI. Firmy, które nie kontrolują, jak ich pracownicy używają AI, mogą zostać uznane za podmioty 'wysokiego ryzyka'.")
-
 with col2:
     st.error("🔐 **Luka RODO**")
     st.write("OpenAI domyślnie uczy się na danych, które tam wpisujemy. Jeśli pracownik wklei treść umowy, staje się ona częścią 'mózgu' AI. To złamanie RODO.")
-
 with col3:
     st.error("🕵️ **Shadow AI**")
     st.write("Statystycznie 80% pracowników już używa AI na prywatnych telefonach, bo firma nie dała im oficjalnego, bezpiecznego narzędzia. My to zmieniamy.")
@@ -51,7 +52,7 @@ st.divider()
 
 # 5. Interfejs Użytkownika
 st.write("#### 🚀 Bezpieczne zapytanie do modelu GPT-4o")
-user_input = st.text_area("Wklej tutaj tekst do analizy:", height=200)
+user_input = st.text_area("Wklej tutaj tekst do analizy (system ukryje dane osobowe):", height=200)
 
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
     if not user_input:
@@ -76,11 +77,9 @@ if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
 # 6. Stopka i Kontakt
 st.divider()
 f_col1, f_col2 = st.columns([2, 1])
-
 with f_col1:
     st.write("### O SafeAI Gateway")
     st.write("Dostarczamy rozwiązania Privacy-First dla sektora prawnego i finansowego. Nasza bramka pozwala na bezpieczną adopcję AI zgodnie z prawem.")
-
 with f_col2:
     st.write("### 📩 Kontakt")
     st.write("**E-mail:** vkarykin7@gmail.com")
