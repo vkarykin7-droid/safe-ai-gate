@@ -47,16 +47,6 @@ with st.sidebar:
 st.title("🛡️ SafeAI Gateway")
 st.markdown("### Profesjonalna bariera ochronna dla firm korzystających z AI")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.error("⚖️ **AI Act (Nowe prawo)**")
-    st.write("W 2026 roku wchodzą w życie kluczowe przepisy unijne o AI. Firmy, które nie kontrolują AI, mogą zostać uznane za podmioty 'wysokiego ryzyka'.")
-with col2:
-    st.error("🔐 **Luka RODO**")
-    st.write("OpenAI domyślnie uczy się na danych. Jeśli pracownik wklei treść umowy, staje się ona częścią 'mózgu' AI. To złamanie RODO.")
-with col3:
-    st.error("🕵️ **Shadow AI**")
-    st.write("Statystycznie 80% pracowników już używa AI prywatnie. My dajemy oficjalne, bezpieczne narzędzie firmowe.")
 
 st.divider()
 
