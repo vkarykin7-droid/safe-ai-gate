@@ -3,6 +3,7 @@ import re
 from openai import OpenAI
 import pdfplumber
 from docx import Document
+import base64
 
 # 1. Konfiguracja strony
 st.set_page_config(page_title="SafeAI Gateway Pro", page_icon="🛡️", layout="wide")
@@ -13,6 +14,8 @@ try:
 except:
     st.error("Błąd: Nie skonfigurowano klucza API w Secrets!")
     st.stop()
+
+client = OpenAI(api_key=API_KEY)
 
 # 2. Silnik anonimizacji danych (RODO)
 def clean_data(text):
@@ -26,6 +29,10 @@ def clean_data(text):
     text = re.sub(r'\b\d{6,}\b', '[UKRYTY_CIĄG_CYFR]', text)
     text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(\s+[0-9A-Za-z/]+)?', '[UKRYTY_ADRES]', text)
     return text
+
+# Funkcja pomocnicza do obrazów
+def encode_image(image_file):
+    return base64.b64encode(image_file.getvalue()).decode('utf-8')
 
 # 3. Panel Boczny
 with st.sidebar:
@@ -56,7 +63,6 @@ st.divider()
 # 5. Interfejs Użytkownika - Pole tekstowe (GÓRA)
 st.write("#### 🚀 Bezpieczne zapytanie do modelu GPT-4o")
 
-# Inicjalizacja tekstu w sesji, aby przycisk wgrywania mógł go uzupełnić
 if 'file_text' not in st.session_state:
     st.session_state['file_text'] = ""
 
@@ -66,56 +72,76 @@ user_input = st.text_area(
     height=250
 )
 
-# --- OBSŁUGA PLIKÓW (DÓŁ) ---
+# --- OBSŁUGA PLIKÓW I OBRAZÓW (DÓŁ) ---
 st.write("---")
-uploaded_file = st.file_uploader("📂 Opcjonalnie: Wczytaj treść z pliku (PDF, DOCX)", type=["pdf", "docx"])
+uploaded_file = st.file_uploader("📂 Opcjonalnie: Wczytaj treść z pliku (PDF, DOCX, JPG, PNG)", type=["pdf", "docx", "jpg", "png", "jpeg"])
+
+image_base64 = None
 
 if uploaded_file is not None:
     try:
         if uploaded_file.type == "application/pdf":
             with pdfplumber.open(uploaded_file) as pdf:
                 text = "\n".join([page.extract_text() for page in pdf.pages if page.extract_text()])
+                if text != st.session_state['file_text']:
+                    st.session_state['file_text'] = text
+                    st.rerun()
+        
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             doc = Document(uploaded_file)
             text = "\n".join([para.text for para in doc.paragraphs])
-        
-        if text != st.session_state['file_text']:
-            st.session_state['file_text'] = text
-            st.rerun() # Odśwież, aby tekst wskoczył do pola wyżej
+            if text != st.session_state['file_text']:
+                st.session_state['file_text'] = text
+                st.rerun()
+
+        elif uploaded_file.type in ["image/jpeg", "image/png"]:
+            st.image(uploaded_file, caption="Wgrane zdjęcie", width=300)
+            st.info("📸 Wykryto obraz. System użyje modułu Vision do odczytu tekstu podczas przetwarzania.")
+            image_base64 = encode_image(uploaded_file)
+
     except Exception as e:
         st.error(f"Błąd odczytu: {e}")
 
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
-    if not user_input:
-        st.warning("Najpierw wprowadź tekst.")
+    if not user_input and image_base64 is None:
+        st.warning("Najpierw wprowadź tekst lub wgraj obraz.")
     else:
-        cleaned = clean_data(user_input)
-        st.info("🛡️ **Tarcza SafeAI:** Dane zanonimizowane przed wysłaniem:")
-        st.code(cleaned)
-        
-        try:
-            client = OpenAI(api_key=API_KEY)
-            with st.spinner('Trwa generowanie odpowiedzi...'):
+        with st.spinner('Trwa analiza i anonimizacja...'):
+            final_prompt = user_input
+            
+            # Jeśli mamy obraz, najpierw prosimy AI o wyciągnięcie tekstu
+            if image_base64:
+                vision_response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Przepisz cały tekst z tego zdjęcia. Nie dodawaj komentarzy."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                        ]
+                    }]
+                )
+                final_prompt = vision_response.choices[0].message.content
+
+            # ANONIMIZACJA WYCIĄGNIĘTEGO TEKSTU
+            cleaned = clean_data(final_prompt)
+            st.info("🛡️ **Tarcza SafeAI:** Dane zanonimizowane przed wysłaniem:")
+            st.code(cleaned)
+            
+            try:
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": cleaned}]
                 )
                 st.success("✨ Odpowiedź od AI:")
                 st.write(response.choices[0].message.content)
-        except Exception as e:
-            st.error(f"❌ Problem z połączeniem: {str(e)}")
+            except Exception as e:
+                st.error(f"❌ Problem z połączeniem: {str(e)}")
 
-# 6. Stopka i Nowy Opis
+# 6. Stopka i Opis
 st.divider()
 st.write("### O SafeAI Gateway")
 st.write("Dostarczamy rozwiązania Privacy-First dla sektora prawnego i finansowego. Nasza bramka pozwala na bezpieczną adopcję AI zgodnie z polskim i europejskim prawem.")
 
 f_col1, f_col2 = st.columns([2, 1])
-with f_col1:
-    st.write("Działamy w oparciu o zaawansowane filtry de-identyfikacji danych wrażliwych, zapewniając pełną poufność Twoich procesów biznesowych.")
-with f_col2:
-    st.write("### 📩 Kontakt")
-    st.write("**E-mail:** vkarykin7@gmail.com")
-
-st.divider()
-st.caption("© 2026 SafeAI Gateway Polska | Zgodność z RODO i AI Act")
+with
