@@ -14,12 +14,25 @@ except:
 
 # 2. Silnik anonimizacji danych (RODO)
 def clean_data(text):
+    # 1. Dane kontaktowe
     text = re.sub(r'\S+@\S+', '[UKRYTY_EMAIL]', text)
     text = re.sub(r'(?:\+\d{2})?\s?\d{3}[-\s]?\d{3}[-\s]?\d{3}', '[UKRYTY_TEL]', text)
-    text = re.sub(r'\d{3}-\d{3}-\d{2}-\d{2}', '[UKRYTY_NIP]', text)
-    text = re.sub(r'\d{11}', '[UKRYTY_PESEL]', text)
-    text = re.sub(r'\d{2}-\d{3}', '[UKRYTY_KOD]', text)
-    text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+', '[UKRYTY_ADRES]', text)
+    
+    # 2. Imiona i Nazwiska (Wykrywa zwroty Pan/Pani + nazwisko)
+    text = re.sub(r'(Pan|Pani|Panem|Panią)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)?', '[UKRYTY_KLIENT]', text)
+
+    # 3. Inteligentne wykrywanie ID (NIP/PESEL/REGON nawet jeśli są krótkie)
+    # Szuka słowa kluczowego i ciągu cyfr po nim
+    patterns = [r'NIP[:\s]*(\d+[-\d]*)', r'PESEL[:\s]*(\d+)', r'REGON[:\s]*(\d+)', r'NR DOWODU[:\s]*(\S+)']
+    for pattern in patterns:
+        text = re.sub(pattern, lambda m: m.group(0).split(':')[0] + ': [UKRYTE_DANE]', text, flags=re.IGNORECASE)
+
+    # 4. Uniwersalny filtr długich ciągów cyfr (Konta bankowe, długie ID)
+    text = re.sub(r'\b\d{7,}\b', '[UKRYTY_NUMER]', text) 
+
+    # 5. Adresy
+    text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(\s+[0-9A-Za-z/]+)?', '[UKRYTY_ADRES]', text)
+    
     return text
 
 # 3. Panel Boczny
