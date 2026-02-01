@@ -40,41 +40,62 @@ with st.sidebar:
 st.title("🛡️ SafeAI Gateway")
 st.markdown("### Profesjonalna bariera ochronna dla firm korzystających z AI")
 
-# --- TUTAJ DODAŁEM PRZYCISK DO PLIKÓW ---
-st.write("#### 📂 Krok 1: Wgraj plik (PDF/DOCX)")
-uploaded_file = st.file_uploader("Przeciągnij plik tutaj lub kliknij 'Browse files'", type=["pdf", "docx"])
-extracted_text = ""
-
-if uploaded_file is not None:
-    if uploaded_file.type == "application/pdf":
-        with pdfplumber.open(uploaded_file) as pdf:
-            extracted_text = "\n".join([page.extract_text() for page in pdf.pages if page.extract_text()])
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        doc = Document(uploaded_file)
-        extracted_text = "\n".join([para.text for para in doc.paragraphs])
-    st.success("✅ Plik wczytany!")
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.error("⚖️ **AI Act (Nowe prawo)**")
+    st.write("W 2026 roku wchodzą w życie kluczowe przepisy unijne o AI. Firmy, które nie kontrolują AI, mogą zostać uznane za podmioty 'wysokiego ryzyka'.")
+with col2:
+    st.error("🔐 **Luka RODO**")
+    st.write("OpenAI domyślnie uczy się na danych. Jeśli pracownik wklei treść umowy, staje się ona częścią 'mózgu' AI. To złamanie RODO.")
+with col3:
+    st.error("🕵️ **Shadow AI**")
+    st.write("Statystycznie 80% pracowników już używa AI prywatnie. My dajemy oficjalne, bezpieczne narzędzie firmowe.")
 
 st.divider()
 
-# 5. Interfejs Użytkownika - Pole tekstowe
-st.write("#### 🚀 Krok 2: Bezpieczne zapytanie do GPT-4o")
+# 5. Interfejs Użytkownika - Pole tekstowe (GÓRA)
+st.write("#### 🚀 Bezpieczne zapytanie do modelu GPT-4o")
+
+# Inicjalizacja tekstu w sesji, aby przycisk wgrywania mógł go uzupełnić
+if 'file_text' not in st.session_state:
+    st.session_state['file_text'] = ""
+
 user_input = st.text_area(
-    "Edytuj treść lub wklej tekst ręcznie:", 
-    value=extracted_text, # To połączy plik z polem tekstowym
+    "Wklej tutaj tekst do analizy (system ukryje dane osobowe):", 
+    value=st.session_state['file_text'], 
     height=250
 )
 
+# --- OBSŁUGA PLIKÓW (DÓŁ) ---
+st.write("---")
+uploaded_file = st.file_uploader("📂 Opcjonalnie: Wczytaj treść z pliku (PDF, DOCX)", type=["pdf", "docx"])
+
+if uploaded_file is not None:
+    try:
+        if uploaded_file.type == "application/pdf":
+            with pdfplumber.open(uploaded_file) as pdf:
+                text = "\n".join([page.extract_text() for page in pdf.pages if page.extract_text()])
+        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            doc = Document(uploaded_file)
+            text = "\n".join([para.text for para in doc.paragraphs])
+        
+        if text != st.session_state['file_text']:
+            st.session_state['file_text'] = text
+            st.rerun() # Odśwież, aby tekst wskoczył do pola wyżej
+    except Exception as e:
+        st.error(f"Błąd odczytu: {e}")
+
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
     if not user_input:
-        st.warning("Najpierw wprowadź tekst lub wgraj plik.")
+        st.warning("Najpierw wprowadź tekst.")
     else:
         cleaned = clean_data(user_input)
-        st.info("🛡️ **Tarcza SafeAI:** Dane zanonimizowane:")
+        st.info("🛡️ **Tarcza SafeAI:** Dane zanonimizowane przed wysłaniem:")
         st.code(cleaned)
         
         try:
             client = OpenAI(api_key=API_KEY)
-            with st.spinner('Generowanie odpowiedzi...'):
+            with st.spinner('Trwa generowanie odpowiedzi...'):
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": cleaned}]
@@ -82,9 +103,19 @@ if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
                 st.success("✨ Odpowiedź od AI:")
                 st.write(response.choices[0].message.content)
         except Exception as e:
-            st.error(f"❌ Problem: {str(e)}")
+            st.error(f"❌ Problem z połączeniem: {str(e)}")
 
-# 6. Kontakt
+# 6. Stopka i Nowy Opis
 st.divider()
-st.write("📩 **Kontakt:** vkarykin7@gmail.com")
-st.caption("© 2026 SafeAI Gateway Polska")
+st.write("### O SafeAI Gateway")
+st.write("Dostarczamy rozwiązania Privacy-First dla sektora prawnego i finansowego. Nasza bramka pozwala na bezpieczną adopcję AI zgodnie z polskim i europejskim prawem.")
+
+f_col1, f_col2 = st.columns([2, 1])
+with f_col1:
+    st.write("Działamy w oparciu o zaawansowane filtry de-identyfikacji danych wrażliwych, zapewniając pełną poufność Twoich procesów biznesowych.")
+with f_col2:
+    st.write("### 📩 Kontakt")
+    st.write("**E-mail:** vkarykin7@gmail.com")
+
+st.divider()
+st.caption("© 2026 SafeAI Gateway Polska | Zgodność z RODO i AI Act")
