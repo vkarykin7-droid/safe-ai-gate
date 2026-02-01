@@ -18,7 +18,7 @@ def clean_data(text):
     text = re.sub(r'(ul\.|ulica|Al\.|Aleja|Plac|Park|ul)\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+', '[UKRYTY_ADRES]', text)
     return text
 
-# 3. Panel Boczny - Status i Aktywność
+# 3. Panel Boczny
 with st.sidebar:
     st.header("⚙️ Status Systemu")
     st.success("✅ Połączono: SafeAI Cloud")
@@ -27,7 +27,7 @@ with st.sidebar:
     st.metric(label="Zablokowane wycieki", value="142", delta="+12%")
     st.metric(label="Przetworzone zapytania", value="1.2k")
     st.divider()
-    st.write("🔒 **Technologia:** Każde zapytanie przechodzi przez lokalny filtr de-identyfikacji przed wysłaniem do serwerów AI.")
+    st.write("🔒 **Technologia:** Każde zapytanie przechodzi przez lokalny filtr de-identyfikacji.")
 
 # 4. Sekcja Marketingowa - Twoje argumenty biznesowe
 st.title("🛡️ SafeAI Gateway")
@@ -41,7 +41,7 @@ with col1:
 
 with col2:
     st.error("🔐 **Luka RODO**")
-    st.write("OpenAI domyślnie uczy się na danych, które tam wpisujemy. Jeśli pracownik wklei treść umowy, staje się ona częścią 'mózgu' AI. To złamanie RODO, za które prezes odpowiada finansowo.")
+    st.write("OpenAI domyślnie uczy się na danych, które tam wpisujemy. Jeśli pracownik wklei treść umowy, staje się ona częścią 'mózgu' AI. To złamanie RODO.")
 
 with col3:
     st.error("🕵️ **Shadow AI**")
@@ -51,22 +51,19 @@ st.divider()
 
 # 5. Interfejs Użytkownika
 st.write("#### 🚀 Bezpieczne zapytanie do modelu GPT-4o")
-user_input = st.text_area("Wklej tutaj tekst (np. szkic umowy lub e-mail), który chcesz przeanalizować:", height=200)
+user_input = st.text_area("Wklej tutaj tekst do analizy:", height=200)
 
 if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
     if not user_input:
-        st.warning("Najpierw wprowadź tekst do analizy.")
+        st.warning("Najpierw wprowadź tekst.")
     else:
-        # KROK 1: Anonimizacja
         cleaned = clean_data(user_input)
-        
-        st.info("🛡️ **Tarcza SafeAI:** Twoje dane zostały zanonimizowane. Poniżej podgląd treści wysłanej do AI:")
+        st.info("🛡️ **Tarcza SafeAI:** Twoje dane zostały zanonimizowane przed wysłaniem:")
         st.code(cleaned)
         
-        # KROK 2: Połączenie z OpenAI
         try:
             client = OpenAI(api_key=API_KEY)
-            with st.spinner('Generowanie bezpiecznej odpowiedzi...'):
+            with st.spinner('Trwa generowanie odpowiedzi...'):
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": cleaned}]
@@ -75,7 +72,19 @@ if st.button("🚀 Uruchom Bezpieczne Przetwarzanie"):
                 st.write(response.choices[0].message.content)
         except Exception as e:
             st.error(f"❌ Problem z połączeniem: {str(e)}")
-            st.info("Jeśli widzisz błąd 401, sprawdź czy klucz API jest nadal aktywny w panelu OpenAI.")
 
-# 6. Profesjonalna Stopka i Kontakt
-st.
+# 6. Stopka i Kontakt
+st.divider()
+f_col1, f_col2 = st.columns([2, 1])
+
+with f_col1:
+    st.write("### O SafeAI Gateway")
+    st.write("Dostarczamy rozwiązania Privacy-First dla sektora prawnego i finansowego. Nasza bramka pozwala na bezpieczną adopcję AI zgodnie z prawem.")
+
+with f_col2:
+    st.write("### 📩 Kontakt")
+    st.write("**E-mail:** vkarykin7@gmail.com")
+    st.write("**Wdrożenia:** Zapytaj o wersję dla Twojej firmy.")
+
+st.divider()
+st.caption("© 2026 SafeAI Gateway Polska | Zgodność z RODO i AI Act")
