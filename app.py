@@ -4,6 +4,12 @@ SafeAI Gateway Pro - Bezpieczny Agent AI z Anonimizacją Danych (RODO)
 Główny plik aplikacji Streamlit.
 """
 
+import sys
+import os
+
+# Dodajemy katalog projektu do ścieżki Pythona — wymagane na Streamlit Cloud
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import streamlit as st
 from core.redaction import DataRedactor
 from core.extractors import FileExtractor
